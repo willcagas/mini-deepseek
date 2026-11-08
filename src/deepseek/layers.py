@@ -56,6 +56,9 @@ class RoPE(nn.Module):
         self.rotation_angles = token_pos * self.rotation_rates # angle = token pos x rotation rate
 
     def rotate(self, x):
+        original_dtype = x.dtype
+        x = x.float() # convert to fp32
+        
         cos = self.rotation_angles.cos()
         sin = self.rotation_angles.sin()
 
@@ -71,7 +74,7 @@ class RoPE(nn.Module):
         x = torch.stack((rotated_a, rotated_b), dim=-1) # combine rotated values from a and b (respecitively) into pairs along the last dimension
         x = x.view(x.size(0), x.size(1), x.size(2) * 2)
 
-        return x
+        return x.to(original_dtype)
 
     def forward(self, query, key):
         return self.rotate(query), self.rotate(key)
