@@ -1,1 +1,5 @@
 tokenizer_name: "HuggingFaceTB/SmolLM2-135M"
+
+model:
+  hidden_size: 512
+  vocab_size: 49,152
