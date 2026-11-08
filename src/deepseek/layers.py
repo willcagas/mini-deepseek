@@ -36,7 +36,7 @@ class SwiGLU(nn.Module):
 
     def forward(self, x):
         gate_proj = self.gate_linear(x) # matrix multiplication --> x @ W
-        swish_gate = gate_proj * F.silu(gate_proj) # apply swish (sigmoid linear unit)
+        swish_gate = F.silu(gate_proj) # apply swish (sigmoid linear unit)
 
         up_proj = self.up_linear(x) # matrix multiplication --> x @ V
 
