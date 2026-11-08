@@ -53,7 +53,9 @@ class RoPE(nn.Module):
         self.rotation_rates = 1 / (10000 ** (2*pair_indices / feature_size)) # constant rotation rate for each feature-pair, shared across every query and key vector
 
         token_pos = torch.arange(start=0,end=sequence_len,step=1).view(sequence_len, 1) # create 1D tensor then reshape to 2D tensor with dim 0 size of sequence len
-        self.rotation_angles = token_pos * self.rotation_rates # angle = token pos x rotation rate
+        rotation_angles = token_pos * self.rotation_rates # angle = token pos x rotation rate
+
+        self.register_buffer("rotation_angles", rotation_angles, persistent=False) # register as buffer
 
     def rotate(self, x):
         original_dtype = x.dtype
