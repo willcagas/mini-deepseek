@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 
 # Root Mean Square Layer Normalization (RMSNorm)
 class RMSNorm(nn.Module):
@@ -34,10 +35,8 @@ class SwiGLU(nn.Module):
         self.down_linear = nn.Linear(in_features=inter_size, out_features=hidden_size, bias=False) # technically not SwiGLU, but part of the FF block as a whole
 
     def forward(self, x):
-        sigmoid = nn.Sigmoid()
-
         gate_proj = self.gate_linear(x) # matrix multiplication --> x @ W
-        swish_gate = gate_proj * sigmoid(gate_proj) # apply swish (sigmoid linear unit)
+        swish_gate = gate_proj * F.silu(gate_proj) # apply swish (sigmoid linear unit)
 
         up_proj = self.up_linear(x) # matrix multiplication --> x @ V
 
