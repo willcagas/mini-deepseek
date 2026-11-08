@@ -44,3 +44,34 @@ class SwiGLU(nn.Module):
 
         return swi_glu
 
+
+class RoPE(nn.Module):
+    def __init__(self, sequence_len, feature_size):
+        super().__init__()  
+
+        pair_indices = torch.arange(start=0,end=feature_size//2,step=1) # feature-pair indices
+        self.rotation_rates = 1 / (10000 ** (2*pair_indices / feature_size)) # constant rotation rate for each feature-pair, shared across every query and key vector
+
+        token_pos = torch.arange(start=0,end=sequence_len,step=1).view(sequence_len, 1) # create 1D tensor then reshape to 2D tensor with dim 0 size of sequence len
+        self.rotation_angles = token_pos * self.rotation_rates # angle = token pos x rotation rate
+
+    def rotate(self, x):
+        cos = self.rotation_angles.cos()
+        sin = self.rotation_angles.sin()
+
+        x = x.view(x.size(0), x.size(1), x.size(2) // 2, 2) # turn into 4D tensor with shape (batch_size, sequence_len, num_pairs, 2)
+        
+        a = x[:, :, :, 0] # first value of every pair
+        b = x[:, :, :, 1] # second value of every pair
+
+        # apply rotation linear transformation
+        rotated_a = a*cos - b*sin 
+        rotated_b = a*sin + b*cos
+
+        x = torch.stack((rotated_a, rotated_b), dim=-1) # combine rotated values from a and b (respecitively) into pairs along the last dimension
+        x = x.view(x.size(0), x.size(1), x.size(2) * 2)
+
+        return x
+
+    def forward(self, query, key):
+        return self.rotate(query), self.rotate(key)
