@@ -15,21 +15,22 @@ def generate_text(prompt, max_tokens=100):
     tok_ids = tokenizer(prompt, return_tensors="pt")["input_ids"].to(device)
 
     with torch.no_grad():
-        logits = model(tok_ids) # prefill call, shape (1, sequence, vocab size)
+        # prefill, select the last prompt token's scores
+        logits = model(tok_ids)
+        next_logits = logits[:, -1, :] # shape (batch, vocab size)
 
-        # autoregressive decoding
+        # decode, pass next token until EOS token or max tokens
         for step in range(max_tokens):
-            last_logits = logits[:, -1, :] # take the last token's (in the sequence) vocab logits to predict the next token
-            next_tok = last_logits.argmax(dim=-1, keepdim=True) # greedy token decoding, shape (batch, 1)
+            next_tok = next_logits.argmax(dim=-1, keepdim=True)
 
-            # check for EOS token
             if next_tok.item() == tokenizer.eos_token_id:
                 break
 
-            tok_ids = torch.cat((tok_ids, next_tok), dim=1) # concatenate to add next token to tensor of token ids
+            tok_ids = torch.cat((tok_ids, next_tok), dim=1)
 
             if step + 1 < max_tokens:
-                logits = model(tok_ids) # recompute with the new token included
+                logits = model(next_tok) # cached decode, output is one token with scores, shape (batch, 1, vocab size)
+                next_logits = logits.squeeze(1) # shape (batch, vocab_size)
  
     output = tokenizer.decode(tok_ids[0].tolist(), skip_special_tokens=True) # detokenize IDs into final text output
 
