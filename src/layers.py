@@ -57,13 +57,13 @@ class RoPE(nn.Module):
 
         self.register_buffer("rotation_angles", rotation_angles, persistent=False) # register as buffer
 
-    def rotate(self, x):
+    def rotate(self, x, start_pos):
         original_dtype = x.dtype
         original_shape = x.shape
 
         x = x.float() # convert to fp32
 
-        angles = self.rotation_angles[:x.size(1)]
+        angles = self.rotation_angles[start_pos : start_pos + x.size(1)] # start at 0 for prefill and current token pos for cached decoding to choose correct angles
 
         # for positional queries with multiple heads
         if x.dim() == 4:
@@ -86,5 +86,5 @@ class RoPE(nn.Module):
 
         return x.to(original_dtype)
 
-    def forward(self, query, key):
-        return self.rotate(query), self.rotate(key) # rotate positional query and positional key
+    def forward(self, query, key, start_pos=0):
+        return self.rotate(query, start_pos), self.rotate(key, start_pos) # rotate positional query and positional key
