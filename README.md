@@ -1,4 +1,4 @@
-# DeepSeek-V3 From Scratch
+# Mini DeepSeek-V3
 
 A miniature implementation of DeepSeekV3 from scratch including multi-head latent attention (MLA), compressed KV caching, DeepSeekMoE, multi-token prediction (MTP), RoPE, RMSNorm, and SwiGLU.
 
