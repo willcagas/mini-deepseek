@@ -3,3 +3,15 @@ tokenizer_name: "HuggingFaceTB/SmolLM2-135M"
 model:
   hidden_size: 512
   vocab_size: 49152
+
+mla:
+  num_heads: 8
+  kv_latent_size: 128
+  query_latent_size: 128
+  qk_nope_head_dim: 64
+  qk_rope_head_dim: 32
+  value_head_dim: 64
+
+rms:
+  epsilon: 1.0e-6
+  max_sequence_len: 2048

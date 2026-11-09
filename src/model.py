@@ -18,7 +18,7 @@ class MiniDeepSeekV3(nn.Module):
 
     # input of token IDs as values, shape (batch size, sequence len)
     def forward(self, x):
-        tok_embeddings = self.tok_embed_table(x) # lookup embeddings and return shape (batch size, sequence len, hidden size)
+        tok_embeddings = self.tok_embed_table(x) # lookup token IDs and return embeddings, shape (batch size, sequence len, hidden size)
 
 
         return self.lm_head(tok_embeddings) # temporary of tok embeddings, shape (batch size, sequence len, vocab size)

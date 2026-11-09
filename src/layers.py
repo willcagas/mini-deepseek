@@ -44,7 +44,7 @@ class SwiGLU(nn.Module):
 
         return swi_glu
 
-
+# Rotary Positional Embeddings (RoPE)
 class RoPE(nn.Module):
     def __init__(self, sequence_len, feature_size):
         super().__init__()  
@@ -59,24 +59,32 @@ class RoPE(nn.Module):
 
     def rotate(self, x):
         original_dtype = x.dtype
-        x = x.float() # convert to fp32
-        
-        cos = self.rotation_angles.cos()
-        sin = self.rotation_angles.sin()
+        original_shape = x.shape
 
-        x = x.view(x.size(0), x.size(1), x.size(2) // 2, 2) # turn into 4D tensor with shape (batch_size, sequence_len, num_pairs, 2)
+        x = x.float() # convert to fp32
+
+        angles = self.rotation_angles[:x.size(1)]
+
+        # for positional queries with multiple heads
+        if x.dim() == 4:
+            angles = angles.unsqueeze(1) # share angles across heads
         
-        a = x[:, :, :, 0] # first value of every pair
-        b = x[:, :, :, 1] # second value of every pair
+        cos = angles.cos()
+        sin = angles.sin()
+
+        x = x.reshape(*original_shape[:-1], original_shape[-1] // 2, 2)  # split the last dim into pairs
+
+        a = x[..., 0] # first value of every pair
+        b = x[..., 1] # second value of every pair
 
         # apply rotation linear transformation
         rotated_a = a*cos - b*sin 
         rotated_b = a*sin + b*cos
 
         x = torch.stack((rotated_a, rotated_b), dim=-1) # combine rotated values from a and b (respecitively) into pairs along the last dimension
-        x = x.view(x.size(0), x.size(1), x.size(2) * 2)
+        x = x.reshape(original_shape    )
 
         return x.to(original_dtype)
 
     def forward(self, query, key):
-        return self.rotate(query), self.rotate(key)
+        return self.rotate(query), self.rotate(key) # rotate positional query and positional key
