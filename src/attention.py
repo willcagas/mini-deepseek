@@ -3,7 +3,7 @@ import torch.nn as nn
 from layers import RMSNorm, RoPE
 import torch.nn.functional as F
 
-# Multi-Head Latent Attention
+# Multi-Head Latent Attention (MLA)
 class MLA(nn.Module):
     def __init__(self, config):
         super().__init__()
