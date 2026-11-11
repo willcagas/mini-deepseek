@@ -1,5 +1,29 @@
 import torch
 import torch.nn as nn
+from layers import RMSNorm, SwiGLU, RoPE
+from attention import MLA
+from moe import MoE
+
+class DeepSeekBlock(nn.Module):
+    def __init__(self, config):
+        super().__init__()
+
+        model_conf = config["model"]
+        rms_conf = config["rms"]
+
+        self.layer_norm_1 = RMSNorm(hidden_size=model_conf["hidden_size"], epsilon=rms_conf["epsilon"])
+        self.mha = MLA(config)
+
+        self.layer_norm_2 = RMSNorm(hidden_size=model_conf["hidden_size"], epsilon=rms_conf["epsilon"])
+        self.mlp = MoE(config)
+
+    def forward(self, x):
+        x = x + self.mha(self.layer_norm_1(x)) # residual skip connection
+
+        moe_output, aux_loss = self.mlp(self.layer_norm_2(x)) 
+        x = x + moe_output # residual skip connection
+
+        return x, aux_loss
 
 class MiniDeepSeekV3(nn.Module):
     def __init__(self, config):
