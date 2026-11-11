@@ -63,6 +63,10 @@ class DeepSeekV3(nn.Module):
         # final layer norm
         self.final_norm = RMSNorm(hidden_size=model_conf["hidden_size"], epsilon=rms_conf["epsilon"])
 
+    def reset_cache(self):
+        for block in self.deepseek_blocks():
+            block.mha.reset_cache()
+
     # input of token IDs as values, shape (batch size, sequence len)
     def forward(self, x):
         x = self.tok_embed_table(x) # lookup token IDs and return embeddings, shape (batch size, sequence len, hidden size)

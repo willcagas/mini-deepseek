@@ -70,6 +70,10 @@ class MLA(nn.Module):
         self.kv_cache = None
         self.k_pos_cache = None
 
+    def reset_cache(self):
+        self.kv_cache = None
+        self.k_pos_cache = None
+
     def forward(self, x, use_cache=False):
         batch_size, sequence_len, hidden_size = x.shape
 
