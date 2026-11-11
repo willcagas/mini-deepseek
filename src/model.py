@@ -25,8 +25,8 @@ class DeepSeekBlock(nn.Module):
         else:
             self.mlp = MoE(config)
 
-    def forward(self, x):
-        x = x + self.mha(self.layer_norm_1(x)) # residual skip connection
+    def forward(self, x, use_cache=False):
+        x = x + self.mha(self.layer_norm_1(x), use_cache=use_cache) # residual skip connection
 
         if self.is_dense:
             output = self.mlp(self.layer_norm_2(x)) # use dense swiglu mlp
@@ -64,17 +64,17 @@ class DeepSeekV3(nn.Module):
         self.final_norm = RMSNorm(hidden_size=model_conf["hidden_size"], epsilon=rms_conf["epsilon"])
 
     def reset_cache(self):
-        for block in self.deepseek_blocks():
+        for block in self.deepseek_blocks:
             block.mha.reset_cache()
 
     # input of token IDs as values, shape (batch size, sequence len)
-    def forward(self, x):
+    def forward(self, x, use_cache=False):
         x = self.tok_embed_table(x) # lookup token IDs and return embeddings, shape (batch size, sequence len, hidden size)
         total_aux_loss = x.new_zeros(())
 
         # run input tensor through each deepseek layer
         for block in self.deepseek_blocks:
-            x, aux_loss = block(x)
+            x, aux_loss = block(x, use_cache=use_cache)
             total_aux_loss = total_aux_loss + aux_loss
 
         x = self.final_norm(x) # one more RMSNorm lol
