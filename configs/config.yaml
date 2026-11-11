@@ -3,6 +3,9 @@ tokenizer_name: "HuggingFaceTB/SmolLM2-135M"
 model:
   hidden_size: 512
   vocab_size: 49152
+  num_layers: 12
+  num_dense_layers: 1
+  dense_inter_size: 3072
 
 mla:
   num_heads: 8
@@ -15,8 +18,8 @@ mla:
 moe:
   routed_experts: 8
   shared_experts: 1
-  routed_expert_inter_size: 1024
-  shared_expert_inter_size: 1024
+  routed_expert_inter_size: 896
+  shared_expert_inter_size: 896
   experts_per_token: 2
   bias_update_gamma: 1.0e-3
   aux_loss_alpha: 1.0e-4

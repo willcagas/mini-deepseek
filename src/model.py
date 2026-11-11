@@ -11,17 +11,26 @@ class DeepSeekBlock(nn.Module):
         model_conf = config["model"]
         rms_conf = config["rms"]
 
+        self.num_layers = model_conf["num_layers"]
+        self.num_dense_layers = model_conf["num_dense_layers"]
+
         self.layer_norm_1 = RMSNorm(hidden_size=model_conf["hidden_size"], epsilon=rms_conf["epsilon"])
         self.mha = MLA(config)
 
         self.layer_norm_2 = RMSNorm(hidden_size=model_conf["hidden_size"], epsilon=rms_conf["epsilon"])
-        self.mlp = MoE(config)
 
-    def forward(self, x):
+        self.mlp = MoE(config)
+        self.dense_mlp = SwiGLU(hidden_size=model_conf["hidden_size"], inter_size=model_conf["dense_inter_size"])
+
+    def forward(self, x, layer_idx):
         x = x + self.mha(self.layer_norm_1(x)) # residual skip connection
 
-        moe_output, aux_loss = self.mlp(self.layer_norm_2(x)) 
-        x = x + moe_output # residual skip connection
+        if layer_idx < self.num_dense_layers:
+            output = self.dense_mlp(self.layer_norm_2(x)) # dense layer
+        else:
+            output, aux_loss = self.mlp(self.layer_norm_2(x)) # moe layer
+
+        x = x + output # residual skip connection
 
         return x, aux_loss
 
