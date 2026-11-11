@@ -16,7 +16,7 @@ def generate_text(prompt, max_tokens=100):
 
     with torch.no_grad():
         # prefill, select the last prompt token's scores
-        logits = model(tok_ids)
+        logits, _ = model(tok_ids, use_cache=True)
         next_logits = logits[:, -1, :] # shape (batch, vocab size)
 
         # decode, pass next token until EOS token or max tokens
