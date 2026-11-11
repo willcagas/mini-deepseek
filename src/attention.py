@@ -70,37 +70,41 @@ class MLA(nn.Module):
         self.kv_cache = None
         self.k_pos_cache = None
 
-    def forward(self, x):
+    def forward(self, x, use_cache=False):
         batch_size, sequence_len, hidden_size = x.shape
 
         kv_compressed = self.kv_norm(self.kv_proj(x)) # compute prefill's kv latents on first pass and each token's latents after
 
-        if self.kv_cache is None:
-            self.kv_cache = kv_compressed
-        else:
-            self.kv_cache = torch.cat((self.kv_cache, kv_compressed), dim=1) # concat existing cached kv latents with new latents from single token
+        if use_cache:
+            if self.kv_cache is None:
+                self.kv_cache = kv_compressed
+            else:
+                self.kv_cache = torch.cat((self.kv_cache, kv_compressed), dim=1) # concat existing cached kv latents with new latents from single token
 
-        kv_compressed = self.kv_cache # contains all cached token's kv latents, shape (batch, key sequence, kv latent size)
+            kv_compressed = self.kv_cache # contains all cached token's kv latents, shape (batch, key sequence, kv latent size)
+
         q_compressed = self.q_norm(self.q_proj(x))
 
         k_pos = self.k_pos_proj(x) # shared positional key, shape (batch, key sequence, rope dim)
         q_pos = self.q_pos_proj(q_compressed)
         q_pos = q_pos.reshape(batch_size, sequence_len, self.num_heads, self.rope_dim)
 
-        # count previously cached tokens
-        if self.k_pos_cache is None:
-            start_pos = 0
-        else: 
-            start_pos = self.k_pos_cache.size(1) # set token pos for correct rotation angle for rope
+        start_pos = 0
+
+        if use_cache:
+            # count previously cached tokens
+            if self.k_pos_cache is not None:
+                start_pos = self.k_pos_cache.size(1) # set token pos for correct rotation angle for rope        
 
         rope_q, rope_k = self.rope(q_pos, k_pos, start_pos=start_pos) # rotate positional features
 
-        if self.k_pos_cache is None:
-            self.k_pos_cache = rope_k
-        else:
-            self.k_pos_cache = torch.cat((self.k_pos_cache, rope_k), dim=1) # concat existing cached rotated pos keys with new rope pos key from single token
+        if use_cache:
+            if self.k_pos_cache is None:
+                self.k_pos_cache = rope_k
+            else:
+                self.k_pos_cache = torch.cat((self.k_pos_cache, rope_k), dim=1) # concat existing cached rotated pos keys with new rope pos key from single token
 
-        rope_k = self.k_pos_cache # contains all cached rotated pos keys, shape (batch, key sequence, rope dim)
+            rope_k = self.k_pos_cache # contains all cached rotated pos keys, shape (batch, key sequence, rope dim)
 
         q_con = self.q_con_proj(q_compressed) 
         q_con = q_con.reshape(batch_size, sequence_len, self.num_heads, self.nope_dim) # shape (batch, sequence, heads, nope dim)
