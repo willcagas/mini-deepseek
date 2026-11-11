@@ -5,30 +5,34 @@ from attention import MLA
 from moe import MoE
 
 class DeepSeekBlock(nn.Module):
-    def __init__(self, config):
+    def __init__(self, config, layer_idx):
         super().__init__()
 
         model_conf = config["model"]
         rms_conf = config["rms"]
 
-        self.num_layers = model_conf["num_layers"]
-        self.num_dense_layers = model_conf["num_dense_layers"]
+        self.num_layers = model_conf["num_layers"] 
+
+        self.is_dense = layer_idx < model_conf["num_dense_layers"]
 
         self.layer_norm_1 = RMSNorm(hidden_size=model_conf["hidden_size"], epsilon=rms_conf["epsilon"])
         self.mha = MLA(config)
 
         self.layer_norm_2 = RMSNorm(hidden_size=model_conf["hidden_size"], epsilon=rms_conf["epsilon"])
 
-        self.mlp = MoE(config)
-        self.dense_mlp = SwiGLU(hidden_size=model_conf["hidden_size"], inter_size=model_conf["dense_inter_size"])
+        if self.is_dense:
+            self.mlp = SwiGLU(hidden_size=model_conf["hidden_size"], inter_size=model_conf["dense_inter_size"])
+        else:
+            self.mlp = MoE(config)
 
-    def forward(self, x, layer_idx):
+    def forward(self, x):
         x = x + self.mha(self.layer_norm_1(x)) # residual skip connection
 
-        if layer_idx < self.num_dense_layers:
-            output = self.dense_mlp(self.layer_norm_2(x)) # dense layer
+        if self.is_dense:
+            output = self.mlp(self.layer_norm_2(x)) # use dense swiglu mlp
+            aux_loss = x.new_zeros(())
         else:
-            output, aux_loss = self.mlp(self.layer_norm_2(x)) # moe layer
+            output, aux_loss = self.mlp(self.layer_norm_2(x)) # use moe
 
         x = x + output # residual skip connection
 
