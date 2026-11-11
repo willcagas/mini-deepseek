@@ -2,14 +2,14 @@ import torch
 
 from transformers import AutoTokenizer
 from src.config import config
-from src.model import MiniDeepSeekV3
+from src.model import DeepSeekV3
 
 tokenizer = AutoTokenizer.from_pretrained(config["tokenizer_name"])
 
 def generate_text(prompt, max_tokens=100):
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
-    model = MiniDeepSeekV3(config=config).to(device)
+    model = DeepSeekV3(config=config).to(device)
     model.eval()
 
     tok_ids = tokenizer(prompt, return_tensors="pt")["input_ids"].to(device)

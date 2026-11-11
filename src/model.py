@@ -38,11 +38,12 @@ class DeepSeekBlock(nn.Module):
 
         return x, aux_loss
 
-class MiniDeepSeekV3(nn.Module):
+class DeepSeekV3(nn.Module):
     def __init__(self, config):
         super().__init__()
 
         model_conf = config["model"]
+        rms_conf = config["rms"]
 
         self.tok_embed_table = nn.Embedding(num_embeddings=model_conf["vocab_size"], embedding_dim=model_conf["hidden_size"])
 
@@ -53,9 +54,26 @@ class MiniDeepSeekV3(nn.Module):
             bias=False,
         )
 
+        # create deepseek transformer blocks
+        self.deepseek_blocks = nn.ModuleList([
+            DeepSeekBlock(config=config, layer_idx=i)
+            for i in range(model_conf["num_layers"])
+        ])
+
+        # final layer norm
+        self.final_norm = RMSNorm(hidden_size=model_conf["hidden_size"], epsilon=rms_conf["epsilon"])
+
     # input of token IDs as values, shape (batch size, sequence len)
     def forward(self, x):
-        tok_embeddings = self.tok_embed_table(x) # lookup token IDs and return embeddings, shape (batch size, sequence len, hidden size)
+        x = self.tok_embed_table(x) # lookup token IDs and return embeddings, shape (batch size, sequence len, hidden size)
+        total_aux_loss = x.new_zeros(())
 
+        # run input tensor through each deepseek layer
+        for block in self.deepseek_blocks:
+            x, aux_loss = block(x)
+            total_aux_loss = total_aux_loss + aux_loss
 
-        return self.lm_head(tok_embeddings) # temporary of tok embeddings, shape (batch size, sequence len, vocab size)
+        x = self.final_norm(x) # one more RMSNorm lol
+        logits = self.lm_head(x) # shape (batch size, sequence len, vocab size)
+
+        return logits, total_aux_loss
