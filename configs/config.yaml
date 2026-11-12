@@ -36,6 +36,6 @@ data:
   validation_fraction: 0.01
   num_workers: 2
   num_tasks: 2
-  documents_per_task: 5000
+  documents_per_task: 100
   tokenization_batch_size: 256
   tokens_per_shard: 1000000

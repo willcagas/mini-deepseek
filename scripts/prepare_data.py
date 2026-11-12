@@ -17,9 +17,9 @@ class PrepareData():
 
         # turn dataset rows and turn into document objects w/ id, text, and metadata
         self.reader = HuggingFaceDatasetReader(
-            dataset=data_conf["dataset_name"],
+            dataset=data_conf["dataset"],
             dataset_options={
-                "name": data_conf["dataset_subset"],
+                "name": data_conf["subset"],
                 "split": "train",
                 "columns": ["id", "text"],
             },
