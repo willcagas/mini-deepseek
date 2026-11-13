@@ -1,8 +1,8 @@
 import torch
 import torch.nn as nn
-from layers import RMSNorm, SwiGLU, RoPE
-from attention import MLA
-from moe import MoE
+from src.layers import RMSNorm, SwiGLU, RoPE
+from src.attention import MLA
+from src.moe import MoE
 
 class DeepSeekBlock(nn.Module):
     def __init__(self, config, layer_idx):

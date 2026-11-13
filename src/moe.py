@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from layers import RMSNorm, SwiGLU
+from src.layers import RMSNorm, SwiGLU
 
 # Mixture of Experts (MoE)
 class MoE(nn.Module):
