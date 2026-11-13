@@ -39,3 +39,8 @@ data:
   documents_per_task: 100
   tokenization_batch_size: 256
   tokens_per_shard: 1000000
+
+training:
+  sequence_len: 2048
+  batch_size: 4
+  learning_rate: 3.0e-4

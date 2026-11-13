@@ -45,7 +45,7 @@ class PrepareData():
         self.logging_dir = str(output_dir / "logs" / split)
 
     def select_documents(self, data, rank=0, world_size=1):
-        # split documents into either train or val splits, before going thruogh tokenizer
+        # split documents into either train or val splits, before going through tokenizer
 
         for document in data:
             # assign identical text to the same split every time
