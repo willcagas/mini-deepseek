@@ -45,8 +45,10 @@ class MoE(nn.Module):
 
         seq_expert_counts = torch.zeros(batch, self.num_routed_experts, device=x.device)
 
-        routed_logits = self.router(x)
-        routed_scores = F.sigmoid(routed_logits) # compute affinity score for each token and expert pair and go through squishification function
+        # put router projection and sigmoid in fp32 for numerical stability
+        with torch.autocast(device_type=x.device.type, enabled=False):
+            routed_logits = self.router(x.float())
+            routed_scores = F.sigmoid(routed_logits) # compute affinity score for each token and expert pair and go through squishification function
 
         selection_scores = routed_scores + self.router_bias
 

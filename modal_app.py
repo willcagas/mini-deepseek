@@ -22,7 +22,7 @@ image = (
 # persistent storage for prepared data and checkpoints
 volume = modal.Volume.from_name("mini-deepseek-v3-data", create_if_missing=True, version=2)
 
-@app.function(image=image, volumes={"/data": volume}, cpu=2, memory=8192, timeout=3600)
+@app.function(image=image, volumes={"/data": volume}, secrets=[modal.Secret.from_name("huggingface-secret")], cpu=8, memory=32768, timeout=86400)
 def prepare_data():
     from src.config import config
     from scripts.prepare_data import main
@@ -70,8 +70,8 @@ def test_data_loaders():
 
         print(f"{split}: {batches} batches checked successfully")
 
-@app.function(image=image, volumes={"/data": volume}, gpu="A100-80GB", cpu=4, memory=16384, timeout=1800)
-def test_training():
+@app.function(image=image, volumes={"/data": volume}, gpu="A100-80GB", cpu=4, memory=16384, timeout=24 * 60 * 60)
+def train():
     import torch
     
     from src.config import config
@@ -79,13 +79,8 @@ def test_training():
 
     assert torch.cuda.is_available(), "Training test requires a GPU."
 
-    # point to the existing tokenized data on the Volume
-    config["data"]["output_dir"] = str(
-        Path("/data") / Path(config["data"]["output_dir"]).name
-    )
-
-    train(max_steps=3)
+    train(max_steps=100, on_checkpoint=volume.commit)
 
 @app.local_entrypoint()
 def main():
-    prepare_data.remote()
+    train.remote()

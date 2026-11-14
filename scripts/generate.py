@@ -29,7 +29,7 @@ def generate_text(prompt, max_tokens=100):
             tok_ids = torch.cat((tok_ids, next_tok), dim=1)
 
             if step + 1 < max_tokens:
-                logits = model(next_tok) # cached decode, output is one token with scores, shape (batch, 1, vocab size)
+                logits, _ = model(next_tok, use_cache=True) # cached decode, output is one token with scores, shape (batch, 1, vocab size)
                 next_logits = logits.squeeze(1) # shape (batch, vocab_size)
  
     output = tokenizer.decode(tok_ids[0].tolist(), skip_special_tokens=True) # detokenize IDs into final text output
