@@ -3,6 +3,7 @@ import torch.nn as nn
 from src.layers import RMSNorm, SwiGLU, RoPE
 from src.attention import MLA
 from src.moe import MoE
+from src.mtp import MTP
 
 class DeepSeekBlock(nn.Module):
     def __init__(self, config, layer_idx):
@@ -63,13 +64,25 @@ class DeepSeekV3(nn.Module):
         # final layer norm
         self.final_norm = RMSNorm(hidden_size=model_conf["hidden_size"], epsilon=rms_conf["epsilon"])
 
+        # multi-token prediction module
+        self.mtp = MTP(
+            config=config,
+            block=DeepSeekBlock(
+                config=config,
+                layer_idx=model_conf["num_dense_layers"]
+            )
+        )
+
     def reset_cache(self):
         for block in self.deepseek_blocks:
             block.mha.reset_cache()
 
     # input of token IDs as values, shape (batch size, sequence len)
     def forward(self, x, use_cache=False):
-        x = self.tok_embed_table(x) # lookup token IDs and return embeddings, shape (batch size, sequence len, hidden size)
+        use_mtp = self.training
+
+        tok_embeddings = self.tok_embed_table(x) # lookup token IDs and return embeddings, shape (batch size, sequence len, hidden size)
+        x = tok_embeddings
         total_aux_loss = x.new_zeros(())
 
         # run input tensor through each deepseek layer
@@ -77,7 +90,18 @@ class DeepSeekV3(nn.Module):
             x, aux_loss = block(x, use_cache=use_cache)
             total_aux_loss = total_aux_loss + aux_loss
 
+        if use_mtp:
+            # pair each hidden state with next token's embedding
+            mtp_hidden, mtp_aux_loss = self.mtp(x[:, :-1, :], tok_embeddings[:, 1:, :])
+
+            # use shared output layers for mtp predictions
+            mtp_logits = self.lm_head(self.final_norm(mtp_hidden))
+            total_aux_loss = total_aux_loss + mtp_aux_loss
+
         x = self.final_norm(x) # one more RMSNorm lol
         logits = self.lm_head(x) # shape (batch size, sequence len, vocab size)
+
+        if use_mtp:
+            return logits, total_aux_loss, mtp_logits
 
         return logits, total_aux_loss
